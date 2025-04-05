@@ -15,7 +15,7 @@ A simple, elegant PDF flipbook viewer that renders PDFs with page-turning animat
 ## Usage
 
 1. Clone or download this repository
-2. Replace `document.pdf` with your own PDF file (keep the same filename)
+2. Replace `document.pdf` in assets folder with your own PDF file (keep the same filename)
 3. Serve the directory using a web server
 4. Open index.html in a browser
 
