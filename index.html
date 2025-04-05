@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Flipbook</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #4c4c4c;
+        }
+
+        #container {
+            width: 100%;
+            height: calc(100% - 100px); /* Increased space for controls from 80px to 100px */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding-top: 15px;
+            padding-bottom: 20px; /* Added padding at bottom */
+        }
+
+        #flipbook-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            margin-bottom: 20px; /* Added margin to ensure space for nav bar */
+        }
+
+        #flipbook {
+            margin: 0 auto;
+            transform-origin: center;
+            background-color: transparent !important;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .page-wrapper {
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+
+        .page-wrapper.empty {
+            background-color: #4c4c4c !important;
+            box-shadow: none;
+        }
+
+        .page {
+            width: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .nav-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            height: 53px;
+            display: none;  /* Hide initially */
+            align-items: center;
+            justify-content: space-between; /* Use space-between to distribute items */
+            gap: 20px;
+            z-index: 1000;
+            border-radius: 8px;
+            padding: 0 20px;  /* Reduced padding to minimize white space */
+        }
+
+        .nav-controls button {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 18px;
+            background: #4682B4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            min-width: 40px;
+            height: 40px; /* Add fixed height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #page-slider {
+            flex: none; /* Remove flex to set a fixed width */
+            width: 160px; /* Match the width of #page-num */
+            margin: 0; /* Remove all margins */
+        }
+
+        #page-num {
+            color: #333;
+            font-family: Arial, sans-serif;
+            min-width: 160px;
+            width: 160px; /* Ensure consistent width with #page-slider */
+            text-align: center;
+            white-space: pre;
+            display: inline-block;
+            margin: 0; /* Remove all margins */
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+        }
+
+        .nav-controls button.fullscreen-btn {
+            background: #4682B4;
+            transition: all 0.3s;
+            padding: 8px 15px;
+            min-width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-controls button.fullscreen-btn .material-icons {
+            font-size: 18px; /* Match the font size of other buttons */
+        }
+
+        .nav-controls button.fullscreen-btn.active {
+            background: #2C5B84;
+        }
+
+        :fullscreen {
+            background-color: #000;
+        }
+
+        :fullscreen #container {
+            background-color: #000;
+        }
+
+        :fullscreen .nav-controls {
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        :fullscreen #page-num {
+            color: #fff;
+        }
+
+        :fullscreen .copyright,
+        :fullscreen #debug {
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+        }
+
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]:hover::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 4px 8px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            font-size: 14px;
+            white-space: nowrap;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+
+        .loading-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            height: 53px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            z-index: 1000;
+            border-radius: 8px;
+            padding: 0 40px;
+            color: #333;
+            font-family: Arial, sans-serif;
+            min-width: 400px; /* Added minimum width */
+            font-size: 18px;
+            white-space: pre;
+        }
+
+        /* Add style for the display mode button */
+        .nav-controls button.display-mode-btn {
+            background: #4682B4;
+            transition: all 0.3s;
+            padding: 8px 15px;
+            min-width: 40px;
+            height: 40px;
+        }
+
+        .nav-controls button.display-mode-btn.active {
+            background: #2C5B84;
+        }
+
+        /* Add this to your styles */
+        .turn-page-wrapper.odd.empty,
+        .turn-page-wrapper.even.empty {
+            background-color: #4c4c4c !important; /* Match body background */
+        }
+
+        .turn-page.empty {
+            background-color: #4c4c4c !important;
+        }
+
+        /* Update/add these styles */
+        .empty-page {
+            background-color: #4c4c4c !important;
+            box-shadow: none !important;
+        }
+
+        .turn-page-wrapper.odd.empty-page,
+        .turn-page-wrapper.even.empty-page {
+            background-color: #4c4c4c !important;
+            box-shadow: none !important;
+        }
+
+        .page-wrapper.empty-page {
+            background-color: #4c4c4c !important;
+            box-shadow: none !important;
+        }
+
+        @media (max-width: 768px) {
+            #page-slider {
+                max-width: 90%; /* Use a percentage to make it responsive */
+            }
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="turnjs/turn.min.js"></script>
+</head>
+<body>
+    <div id="container">
+        <div id="flipbook-container">
+            <div id="flipbook"></div>
+        </div>
+    </div>
+    <div class="nav-controls">
+        <button onclick="goToFirstPage()" data-tooltip="First Page">⏮</button>
+        <button onclick="previousPage()" data-tooltip="Previous Page">◀</button>
+        <input type="range" id="page-slider" min="1" value="1">
+        <span id="page-num">Page: 1</span>
+        <button onclick="nextPage()" data-tooltip="Next Page">▶</button>
+        <button onclick="toggleDisplayMode()" class="display-mode-btn" data-tooltip="Double Page">
+            <i class="material-icons">chrome_reader_mode</i>
+        </button>
+        <button onclick="toggleFullscreen()" class="fullscreen-btn" data-tooltip="Full Screen">
+            <i class="material-icons">fullscreen</i>
+        </button>
+    </div>
+    <div class="loading-bar">Reading Document</div>
+
+    <script type="module">
+        import * as pdfjsLib from './pdfjs/pdf.js';
+        
+        pdfjsLib.GlobalWorkerOptions.workerSrc = './pdfjs/pdf.worker.js';
+
+        const debugEl = document.getElementById('debug');
+        const flipbookEl = document.getElementById('flipbook');
+        const pageNumEl = document.getElementById('page-num');
+        const pageSlider = document.getElementById('page-slider');
+        let totalPages = 0;
+
+        window.goToFirstPage = () => {
+            $(flipbookEl).turn('page', 1);
+            updatePageNumber(1);
+        };
+
+        window.previousPage = () => {
+            const currentPage = $(flipbookEl).turn('page');
+            if (currentPage > 1) {
+                $(flipbookEl).turn('page', currentPage - 1);
+                updatePageNumber(currentPage - 1);
+            }
+        };
+
+        window.nextPage = () => {
+            const currentPage = $(flipbookEl).turn('page');
+            if (currentPage >= totalPages) return; // Don't go beyond total pages
+            
+            const newPage = currentPage + 1;
+            updatePageNumber(newPage);
+            $(flipbookEl).turn('next');
+        };
+
+        function updatePageNumber(pageNum) {
+            // Pad the page number with spaces to ensure consistent width
+            const paddedNum = pageNum.toString().padStart(3, ' ');
+            pageNumEl.textContent = `Page: ${paddedNum} of ${totalPages}`;
+            pageSlider.value = pageNum;
+        }
+
+        function resizeBook() {
+            const container = document.getElementById('flipbook-container');
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            
+            if (!flipbookEl.turnWidth) return; // Not initialized yet
+
+            const displayMode = $(flipbookEl).turn('display');
+            const aspectRatio = flipbookEl.turnWidth / flipbookEl.turnHeight;
+            const doublePageRatio = displayMode === 'double' ? aspectRatio * 2 : aspectRatio;
+            
+            let newWidth, newHeight;
+
+            if (containerWidth / containerHeight > doublePageRatio) {
+                newHeight = containerHeight;
+                newWidth = containerHeight * doublePageRatio;
+            } else {
+                newWidth = containerWidth;
+                newHeight = containerWidth / doublePageRatio;
+            }
+
+            $(flipbookEl).turn('size', newWidth, newHeight);
+        }
+
+        window.toggleFullscreen = () => {
+            const elem = document.documentElement;
+            const fullscreenBtn = document.querySelector('.fullscreen-btn');
+            
+            if (!document.fullscreenElement) {
+                elem.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+                fullscreenBtn.classList.add('active');
+                fullscreenBtn.innerHTML = '<i class="material-icons">fullscreen_exit</i>';
+                fullscreenBtn.setAttribute('data-tooltip', 'Exit Full Screen');
+            } else {
+                document.exitFullscreen();
+                fullscreenBtn.classList.remove('active');
+                fullscreenBtn.innerHTML = '<i class="material-icons">fullscreen</i>';
+                fullscreenBtn.setAttribute('data-tooltip', 'Full Screen');
+            }
+        };
+
+        document.addEventListener('fullscreenchange', () => {
+            const fullscreenBtn = document.querySelector('.fullscreen-btn');
+            if (document.fullscreenElement) {
+                fullscreenBtn.innerHTML = '<i class="material-icons">fullscreen_exit</i>';
+                fullscreenBtn.classList.add('active');
+                fullscreenBtn.setAttribute('data-tooltip', 'Exit Full Screen');
+            } else {
+                fullscreenBtn.innerHTML = '<i class="material-icons">fullscreen</i>';
+                fullscreenBtn.classList.remove('active');
+                fullscreenBtn.setAttribute('data-tooltip', 'Full Screen');
+            }
+            resizeBook();
+        });
+
+        async function initPdfViewer() {
+            try {
+                const loadingTask = pdfjsLib.getDocument('document.pdf');
+                const pdf = await loadingTask.promise;
+                totalPages = pdf.numPages;
+                pageSlider.max = totalPages;
+                updateDebug(`PDF loaded. Pages: ${totalPages}`);
+
+                // Get first page to determine dimensions
+                const firstPage = await pdf.getPage(1);
+                const viewport = firstPage.getViewport({ scale: 1.0 });
+                
+                // Initial dimensions
+                const container = document.getElementById('flipbook-container');
+                const containerWidth = container.clientWidth;
+                const containerHeight = container.clientHeight;
+                const scale = Math.min(
+                    containerWidth / viewport.width,
+                    containerHeight / viewport.height
+                );
+
+                const pageWidth = Math.floor(viewport.width * scale);
+                const pageHeight = Math.floor(viewport.height * scale);
+
+                // Store original dimensions for resize calculations
+                flipbookEl.turnWidth = pageWidth;
+                flipbookEl.turnHeight = pageHeight;
+
+                // Initialize turn.js first
+                $(flipbookEl).turn({
+                    width: pageWidth,
+                    height: pageHeight,
+                    autoCenter: true,
+                    display: 'single',
+                    acceleration: true,
+                    elevation: 50,
+                    gradients: true,
+                    duration: 1000,
+                    page: 1,
+                    when: {
+                        turned: function(e, page) {
+                            updatePageNumber(page);
+                        },
+                        missing: function(e, pages) {
+                            for (let i = 0; i < pages.length; i++) {
+                                const element = $('<div/>', {
+                                    'class': 'empty-page',
+                                    css: {
+                                        'background-color': '#4c4c4c',
+                                        'box-shadow': 'none'
+                                    }
+                                });
+                                $(this).turn('addPage', element, pages[i]);
+                            }
+                        }
+                    }
+                });
+
+                // Add these touch and mouse handling events right after the turn.js initialization
+                let touchStartX = 0;
+                let mouseStartX = 0;
+                let isDragging = false;
+
+                // Touch events
+                flipbookEl.addEventListener('touchstart', (e) => {
+                    touchStartX = e.touches[0].clientX;
+                });
+
+                flipbookEl.addEventListener('touchmove', (e) => {
+                    e.preventDefault(); // Prevent scrolling while swiping
+                });
+
+                flipbookEl.addEventListener('touchend', (e) => {
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const swipeDistance = touchEndX - touchStartX;
+                    
+                    if (Math.abs(swipeDistance) > 50) { // Minimum swipe distance
+                        if (swipeDistance > 0) {
+                            previousPage();
+                        } else {
+                            nextPage();
+                        }
+                    }
+                });
+
+                // Mouse events
+                flipbookEl.addEventListener('mousedown', (e) => {
+                    mouseStartX = e.clientX;
+                    isDragging = true;
+                });
+
+                flipbookEl.addEventListener('mousemove', (e) => {
+                    if (isDragging) {
+                        e.preventDefault(); // Prevent text selection while dragging
+                    }
+                });
+
+                flipbookEl.addEventListener('mouseup', (e) => {
+                    if (isDragging) {
+                        const mouseEndX = e.clientX;
+                        const swipeDistance = mouseEndX - mouseStartX;
+                        
+                        if (Math.abs(swipeDistance) > 50) { // Minimum swipe distance
+                            if (swipeDistance > 0) {
+                                previousPage();
+                            } else {
+                                nextPage();
+                            }
+                        }
+                        isDragging = false;
+                    }
+                });
+
+                flipbookEl.addEventListener('mouseleave', () => {
+                    isDragging = false;
+                });
+
+                // Render all pages
+                for (let i = 1; i <= totalPages; i++) {
+                    updateDebug(`Please Wait\nRendering page ${i}/${totalPages}`);
+                    
+                    const page = await pdf.getPage(i);
+                    const scaledViewport = page.getViewport({ scale });
+
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = 'page-wrapper';
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = scaledViewport.width;
+                    canvas.height = scaledViewport.height;
+                    
+                    const context = canvas.getContext('2d', {
+                        alpha: false,
+                        willReadFrequently: false,
+                        imageSmoothingEnabled: false
+                    });
+
+                    // Fill with white background
+                    context.fillStyle = '#FFFFFF';
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Add detailed logging
+                    console.log(`Rendering page ${i}:`, {
+                        width: canvas.width,
+                        height: canvas.height,
+                        scale,
+                        viewport: scaledViewport
+                    });
+
+                    try {
+                        // Render with specific options
+                        const renderResult = await page.render({
+                            canvasContext: context,
+                            viewport: scaledViewport,
+                            enableWebGL: false,
+                            renderInteractiveForms: false,
+                            background: 'white',
+                            intent: 'print'
+                        }).promise;
+
+                        console.log(`Page ${i} render complete:`, {
+                            success: true,
+                            canvasData: context.getImageData(0, 0, canvas.width, canvas.height).data.slice(0, 100) // Log first 100 pixels
+                        });
+                    } catch (error) {
+                        console.error(`Error rendering page ${i}:`, error);
+                    }
+
+                    pageDiv.appendChild(canvas);
+                    $(flipbookEl).turn('addPage', pageDiv, i);
+
+                    // Log the final canvas state
+                    console.log(`Page ${i} added to flipbook:`, {
+                        canvasInDom: canvas.parentNode === pageDiv,
+                        pageDivInDom: pageDiv.parentNode !== null
+                    });
+
+                    if (i === 1) {
+                        $(flipbookEl).turn('page', 1);
+                        updatePageNumber(1);
+                    }
+
+                    if (i === totalPages) {
+                        // Hide loading bar and show nav controls
+                        document.querySelector('.loading-bar').style.display = 'none';
+                        document.querySelector('.nav-controls').style.display = 'flex';
+                    }
+                }
+
+                updateDebug('Use slider or arrows to navigate\nSwipe left/right on touch devices');
+
+                // Update slider event listeners to handle both dragging and release
+                pageSlider.addEventListener('input', (e) => {
+                    // This fires while dragging
+                    const pageNum = parseInt(e.target.value);
+                    updatePageNumber(pageNum);
+                });
+
+                pageSlider.addEventListener('change', (e) => {
+                    const pageNum = parseInt(e.target.value);
+                    $(flipbookEl).turn('page', pageNum);
+                    updatePageNumber(pageNum);
+                });
+
+                // Add keyboard navigation
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft') previousPage();
+                    if (e.key === 'ArrowRight') nextPage();
+                });
+
+                // Add resize handler
+                window.addEventListener('resize', resizeBook);
+                
+                // Initial resize and display
+                setTimeout(() => {
+                    resizeBook();
+                    $(flipbookEl).turn('page', 1);
+                }, 100);
+
+            } catch (error) {
+                updateDebug(`Error: ${error.message}`);
+                console.error('Error:', error);
+            }
+        }
+
+        $(document).ready(() => {
+            updateDebug('Document ready, initializing...');
+            initPdfViewer();
+        });
+
+        // Disable right-click
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        function updateDebug(message) {
+            if (message.includes('Rendering page')) {
+                const loadingBar = document.querySelector('.loading-bar');
+                const pageMatch = message.match(/page (\d+)\/(\d+)/);
+                if (pageMatch) {
+                    const currentPage = pageMatch[1].padStart(3, ' ');
+                    const totalPages = pageMatch[2];
+                    loadingBar.textContent = `Please Wait. Loading Page: ${currentPage} of ${totalPages}`;
+                }
+            }
+            console.log(message);
+        }
+
+        window.toggleDisplayMode = () => {
+            const btn = document.querySelector('.display-mode-btn');
+            const currentMode = $(flipbookEl).turn('display');
+            const newMode = currentMode === 'single' ? 'double' : 'single';
+            
+            $(flipbookEl).turn('display', newMode);
+            btn.setAttribute('data-tooltip', newMode === 'single' ? 'Double Page' : 'Single Page');
+            btn.innerHTML = `<i class="material-icons">${newMode === 'single' ? 'chrome_reader_mode' : 'book'}</i>`;
+            
+            setTimeout(resizeBook, 0);
+        };
+    </script>
+</body>
+</html>
