@@ -13,7 +13,8 @@ A simple, elegant PDF flipbook viewer that renders PDFs with page-turning animat
 - Page slider for quick navigation
 
 ## Sample Document
-Check out the [sample document](assets/document.pdf) to see the flipbook viewer in action.
+## Sample Document
+Check out the [sample document](https://tehoro.github.io/pdf-flipbook-viewer) to see the flipbook viewer in action.
 
 ## Usage
 
