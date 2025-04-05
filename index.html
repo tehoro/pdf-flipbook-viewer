@@ -269,7 +269,7 @@
         }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="turnjs/turn.min.js"></script>
+    <script src="js/turnjs/turn.min.js"></script>
 </head>
 <body>
     <div id="container">
@@ -293,9 +293,9 @@
     <div class="loading-bar">Reading Document</div>
 
     <script type="module">
-        import * as pdfjsLib from './pdfjs/pdf.js';
+        import * as pdfjsLib from './js/pdfjs/pdf.js';
         
-        pdfjsLib.GlobalWorkerOptions.workerSrc = './pdfjs/pdf.worker.js';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = './js/pdfjs/pdf.worker.js';
 
         const debugEl = document.getElementById('debug');
         const flipbookEl = document.getElementById('flipbook');
@@ -391,7 +391,7 @@
 
         async function initPdfViewer() {
             try {
-                const loadingTask = pdfjsLib.getDocument('document.pdf');
+                const loadingTask = pdfjsLib.getDocument('assets/document.pdf');
                 const pdf = await loadingTask.promise;
                 totalPages = pdf.numPages;
                 pageSlider.max = totalPages;
