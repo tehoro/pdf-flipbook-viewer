@@ -12,6 +12,9 @@ A simple, elegant PDF flipbook viewer that renders PDFs with page-turning animat
 - Fullscreen mode
 - Page slider for quick navigation
 
+## Sample Document
+Check out the [sample document](assets/document.pdf) to see the flipbook viewer in action.
+
 ## Usage
 
 1. Clone or download this repository
