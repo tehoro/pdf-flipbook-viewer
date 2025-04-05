@@ -11,5 +11,4 @@ Thumbs.db
 *.sln
 *.sw?
 
-# Large binary files
-*.pdf
+
