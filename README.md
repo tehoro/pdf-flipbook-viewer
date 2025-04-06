@@ -19,7 +19,7 @@ Check out the [sample document](https://tehoro.github.io/pdf-flipbook-viewer) to
 
 1. Clone or download this repository
 2. Replace `document.pdf` in the assets folder with your own PDF file (keep the same filename)
-3. Make sure not to use CMYK colour (e.g., output for a book)for the pdf file as the colours will look "off" 
+3. Make sure *not* to use CMYK colour (output for a book may use this) for the pdf file as the colours will look "off" 
 4. Serve the directory using a web server
 5. Open index.html in a browser
 
